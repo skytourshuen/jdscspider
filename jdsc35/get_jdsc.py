@@ -1,6 +1,6 @@
 import traceback
 import configparser
-import  requests
+import requests
 from bs4 import BeautifulSoup
 import re
 import redis
@@ -18,14 +18,15 @@ cfg.read("../config.ini")
 redis_con = '' # redis连接
 counter = 0 # 队列计数
 
-session = None # 定义会话信息
-max_queue_len = int(cfg.get("sys", "max_queue_len")) # 最大队列长度
+session = None  # 定义会话信息
+max_queue_len = int(cfg.get("sys", "max_queue_len"))  # 最大队列长度
 sleep_time = float(cfg.get("sys", "sleep_time")) # 睡眠时间
 threadLock = None
 
 # 头部信息带详细的用户信息 不使用缓存
 headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.108 Safari/537.36",
+    "User-Agent": """Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                  Chrome/63.0.3239.108 Safari/537.36""",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
     "Host": "www.jdsc35.com",
     "Referer": "http://www.jdsc35.com/",
@@ -40,19 +41,21 @@ headers = {
 }
 
 ua = (
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_0) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36',
+    '''Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_0) AppleWebKit/535.11 (KHTML, like Gecko) 
+    Chrome/17.0.963.56 Safari/535.11''',
+    '''Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) 
+    Chrome/53.0.2785.143 Safari/537.36''',
     'Mozilla/5.0 (Windows; U; Windows NT 6.1; en-us) AppleWebKit/534.50 (KHTML, like Gecko) Version/5.1 Safari/534.50',
     'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; 360SE)',
 )
 
-class GetJdscCity():
 
+class GetJdscCity():
     def get_index_page(self):
-        '''
+        """
         获取首页上的商户信息
         :return:
-        '''
+        """
         index_url = 'http://www.jdsc35.com/Companys/'
         try:
             index_html = session.get(index_url, headers=headers, timeout=35)
@@ -64,7 +67,7 @@ class GetJdscCity():
             return None
         finally:
             pass
-        business = re.findall('\/Corporation\/Index\/\\d+\.html', index_html.text)
+        business = re.findall('/Corporation/Index/\\d+\.html', index_html.text)
         return business
 
     def get_index_page_business(self):
@@ -241,6 +244,11 @@ class GetRedisData(threading.Thread):
             headers['Host'] = "www.jdsc35.com"
             headers['Referer'] = "http://www.jdsc35.com/"
             headers['Origin'] = "http://www.jdsc35.com/"
+            if re.search(r'http://(?!www)\w+\.jdsc35\.com', business_url) != None:
+                re.search(r'http://(?!www)\w+\.jdsc35\.com', business_url)
+                headers['Host'] = business_url.replace('http://', '')
+                headers['Referer'] = business_url
+                headers['Origin'] = business_url
         elif re.search(r'5jscw', business_url) != None:
             headers['Host'] = "www.5jscw.com"
             headers['Referer'] = "http://www.5jscw.com/"
@@ -251,6 +259,9 @@ class GetRedisData(threading.Thread):
             return
 
         business_html = session.get(business_url, headers=headers, timeout=35)
+        #business_html = requests.get(business_url)
+        # business_html.encoding ='utf-8'
+        # text = str(business_html.text, 'utf-8')
         BS = BeautifulSoup(business_html.text, "html.parser")
         table = BS.find(name='div', attrs={'class': "main_r_contact"})
         if table != None:
@@ -393,6 +404,6 @@ if __name__ == '__main__':
     #test = GetRedisData()
     #test.get_business_info('http://www.jdsc35.com/Corporation/Index/258768.html')
     #test.get_business_info('http://www.jdsc35.com/Corporation/Index/60584.html')
-    #test.get_business_info('http://www.5jscw.com/index.php?homepage=shqt')
+    # test.get_business_info('http://ydhf.jdsc35.com')
     # ss = '上海雷普电器有限公司 -- 中国五金机电市场网'
     # print(ss[:-13])
